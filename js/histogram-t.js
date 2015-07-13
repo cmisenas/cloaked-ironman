@@ -133,8 +133,38 @@
     return {min: min, threshold: threshold};
   };
 
+  var calcBetweenClassVariance = function(weight1, mean1, weight2, mean2) {
+    return weight1 * weight2 * (mean1 - mean2) * (mean1 - mean2);
+  };
+
+  var fastOtsu = function(imgData) {
+    var histogram = createHistogram(imgData);
+    var start = 0;
+    var end = histogram.g.length - 1;
+    var leftWeight, rightWeight,
+        leftMean, rightMean;
+    var betweenClassVariances = [];
+    var max = -Infinity, threshold;
+
+    histogram.g.forEach(function(el, i) {
+      leftWeight = calcWeight(histogram.g, start, i);
+      rightWeight = calcWeight(histogram.g, i, end + 1);
+      leftMean = calcMean(histogram.g, start, i);
+      rightMean = calcMean(histogram.g, i, end + 1);
+      betweenClassVariances[i] = calcBetweenClassVariance(leftWeight, leftMean, rightWeight, rightMean);
+      if (betweenClassVariances[i] > max) {
+        max = betweenClassVariances[i];
+        threshold = i;
+      }
+    });
+
+    return {max: max, threshold: threshold};
+  };
+
   var testImgData2 = [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 2, 2, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5];
   var histogram2 = createHistogram(testImgData2);
 
   console.log(otsu(testImgData2));
+  console.log(fastOtsu(testImgData2));
+
 }(this));
