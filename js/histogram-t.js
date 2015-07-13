@@ -12,9 +12,8 @@
       } else {
         histogram.g[el] = 1;
       }
-      total++;
     });
-    histogram.length = total;
+    histogram.length = imgData.length;
     return histogram;
   }
 
@@ -167,4 +166,53 @@
   console.log(otsu(testImgData2));
   console.log(fastOtsu(testImgData2));
 
+
+  /*
+   * Iterative Selection Thresholding Method
+   * 1. select an initial estimate for T
+   * 2. group the pixels into 2:
+        G1 for pixels with values > T
+        G2 for pixels with values <= T
+   * 3. compute the average value of G1 and G2
+        m1 = average(G1)
+        m2 = average(G2)
+   * 4. compute T' = (m1 + m2)/2
+   * 5. go back to 2 with T' until T' is the same as previous value
+        this means value has converged
+        or the difference is small enough (compare to predefined var)
+   *
+   */
+  var calcAverage = function(arr) {
+    var cSum = sum = 0;
+    arr.forEach(function(el, i) {
+      cSum += (el * i);
+      sum += el;
+    });
+    return cSum/sum;
+  };
+
+  var ist = function(imgData) {
+    var histogram = createHistogram(imgData);
+    var start = 0;
+    var end = histogram.g.length - 1;
+    var mean = Math.round(calcMean(histogram.g, start, end + 1));
+    var meanBelow = Math.round(calcMean(histogram.g, start, mean));
+    var meanAbove = Math.round(calcMean(histogram.g, mean + 1, end + 1));
+    var nMean = Math.round((meanBelow + meanAbove)/2);
+    var thresholds = [mean, nMean];
+    var i = 1;
+
+    while ((thresholds[i] - thresholds[i - 1]) > 0) {
+      mean = thresholds[i];
+
+      meanBelow = Math.round(calcMean(histogram.g, start, mean));
+      meanAbove = Math.round(calcMean(histogram.g, mean + 1, end + 1));
+      nMean = Math.round((meanBelow + meanAbove)/2);
+      thresholds.push(nMean);
+      i++;
+    }
+    return thresholds[thresholds.length - 1];
+  };
+
+  console.log(ist(testImgData2));
 }(this));
