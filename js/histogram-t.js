@@ -79,7 +79,7 @@
     var partHist = (s === e) ? [histogram[s]] : histogram.slice(s, e);
     var val = total = 0;
     partHist.forEach(function(el, i){
-      val += (i * el);
+      val += ((s + i) * el);
       total += el;
     });
     return parseFloat(val, 10)/total;
@@ -90,7 +90,7 @@
     var squaredDiffs = total = 0;
     var diff, sqr;
     partHist.forEach(function(el, i){
-      diff = i - mean;
+      diff = (s + i) - mean;
       sqr = diff * diff;
       squaredDiffs += (sqr * el);
       total += el;
@@ -113,6 +113,9 @@
         leftMean, rightMean,
         leftVariance, rightVariance;
     var withinClassVariances = [];
+    var min = Infinity;
+    var threshold;
+
     histogram.g.forEach(function(el, i) {
       leftWeight = calcWeight(histogram.g, start, i);
       rightWeight = calcWeight(histogram.g, i, end + 1);
@@ -121,17 +124,13 @@
       leftVariance = calcVariance(histogram.g, start, i, leftMean);
       rightVariance = calcVariance(histogram.g, i, end + 1, rightMean);
       withinClassVariances[i] = calcWithinClassVariance(leftVariance, leftWeight, rightVariance, rightWeight);
-    });
-
-    var minVar = Infinity;
-    var min;
-    withinClassVariances.forEach(function(el, i) {
-      if (el < minVar) {
-        minVar = el;
-        min = i;
+      if (withinClassVariances[i] < min) {
+        min = withinClassVariances[i];
+        threshold = i;
       }
     });
-    return {min: min, minVar: minVar};
+
+    return {min: min, threshold: threshold};
   };
 
   var testImgData2 = [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 2, 2, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5];
