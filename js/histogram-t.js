@@ -1,41 +1,14 @@
 ;(function(exports){
-  var createHistogram = function(imgData) {
-    var histogram = { g: [] },
-        total = 0;
-    imgData.forEach(function(el) {
-      // el is the pixel value
-      // imgData is assumed to be a simplified array
-      // with each pixel signifying the value of a
-      // pixel's rgb (meaning the image is grayscale)
-      if (!!histogram.g[el]) {
-        histogram.g[el]++;
-      } else {
-        histogram.g[el] = 1;
-      }
-    });
-    histogram.length = imgData.length;
-    return histogram;
-  }
-
-  var histogramSum = function(histogram, start, end) {
-    var weight = 0;
-    // end is non-inclusive
-    for (var i = start; i < end; i++) {
-      weight += histogram[i];
-    }
-    return weight;
-  }
-
   /*
    * Balanced Histogram Thresholding
    */
-  var bht = function(imgData){
-    var histogram = createHistogram(imgData);
+  var bht = function(canvas){
+    var histogram = Thresh.help.createHistogram(canvas);
     var start = 0;
     var end = histogram.g.length - 1;
     var mid = parseInt((start + end/2), 10);
-    var leftWeight = histogramSum(histogram.g, start, mid + 1);
-    var rightWeight = histogramSum(histogram.g, mid + 1, end + 1);
+    var leftWeight = Thresh.help.histogramSum(histogram.g, start, mid + 1);
+    var rightWeight = Thresh.help.histogramSum(histogram.g, mid + 1, end + 1);
     while(start <= end) {
       if (rightWeight > leftWeight) {
         rightWeight -= histogram.g[end--];
@@ -49,63 +22,24 @@
         leftWeight -= histogram.g[start++];
 
         if (parseInt((start + end)/2, 10) >= mid) {
-          rightWeight -= histogram.g[mid + 1];
-          leftWeight  += histogram.g[mid + 1];
           mid++;
+          rightWeight -= histogram.g[mid];
+          leftWeight  += histogram.g[mid];
         }
       }
     }
     return histogram.g[mid];
   };
 
-  var testImgData1 = [0, 0, 1, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5];
-  console.log(bht(testImgData1));
-
   /*
    * Otsu's Method
    * See http://www.labbookpages.co.uk/software/imgProc/otsuThreshold.html for a better explanation
    */
-
-  // end is non-inclusive
-  var calcWeight = function(histogram, s, e) {
-    var total = histogram.reduce(function(i, j){ return i + j; }, 0);
-    var partHist = (s === e) ? [histogram[s]] : histogram.slice(s, e);
-    var part = partHist.reduce(function(i, j){ return i + j; }, 0);
-    return parseFloat(part, 10)/total;
-  };
-
-  var calcMean = function(histogram, s, e) {
-    var partHist = (s === e) ? [histogram[s]] : histogram.slice(s, e);
-    var val = total = 0;
-    partHist.forEach(function(el, i){
-      val += ((s + i) * el);
-      total += el;
-    });
-    return parseFloat(val, 10)/total;
-  };
-
-  var calcVariance = function(histogram, s, e, mean) {
-    var partHist = (s === e) ? [histogram[s]] : histogram.slice(s, e);
-    var squaredDiffs = total = 0;
-    var diff, sqr;
-    partHist.forEach(function(el, i){
-      diff = (s + i) - mean;
-      sqr = diff * diff;
-      squaredDiffs += (sqr * el);
-      total += el;
-    });
-    return parseFloat(squaredDiffs, 10)/total;
-  };
-
-  var calcWithinClassVariance = function(variance1, weight1, variance2, weight2){
-    return (weight1 * variance1) + (weight2 * variance2);
-  };
-
-  var otsu = function(imgData) {
+  var otsu = function(canvas) {
     // calculate within class variance for each image data value
     // store the results in an array with value's index corresponding to value
     // find the lowest one and get it's index
-    var histogram = createHistogram(imgData);
+    var histogram = Thresh.help.createHistogram(canvas);
     var start = 0;
     var end = histogram.g.length - 1;
     var leftWeight, rightWeight,
@@ -116,13 +50,13 @@
     var threshold;
 
     histogram.g.forEach(function(el, i) {
-      leftWeight = calcWeight(histogram.g, start, i);
-      rightWeight = calcWeight(histogram.g, i, end + 1);
-      leftMean = calcMean(histogram.g, start, i);
-      rightMean = calcMean(histogram.g, i, end + 1);
-      leftVariance = calcVariance(histogram.g, start, i, leftMean);
-      rightVariance = calcVariance(histogram.g, i, end + 1, rightMean);
-      withinClassVariances[i] = calcWithinClassVariance(leftVariance, leftWeight, rightVariance, rightWeight);
+      leftWeight = Thresh.help.calcWeight(histogram.g, start, i);
+      rightWeight = Thresh.help.calcWeight(histogram.g, i, end + 1);
+      leftMean = Thresh.help.calcMean(histogram.g, start, i);
+      rightMean = Thresh.help.calcMean(histogram.g, i, end + 1);
+      leftVariance = Thresh.help.calcVariance(histogram.g, start, i, leftMean);
+      rightVariance = Thresh.help.calcVariance(histogram.g, i, end + 1, rightMean);
+      withinClassVariances[i] = Thresh.help.calcWithinClassVariance(leftVariance, leftWeight, rightVariance, rightWeight);
       if (withinClassVariances[i] < min) {
         min = withinClassVariances[i];
         threshold = i;
@@ -132,12 +66,8 @@
     return {min: min, threshold: threshold};
   };
 
-  var calcBetweenClassVariance = function(weight1, mean1, weight2, mean2) {
-    return weight1 * weight2 * (mean1 - mean2) * (mean1 - mean2);
-  };
-
-  var fastOtsu = function(imgData) {
-    var histogram = createHistogram(imgData);
+  var fastOtsu = function(canvas) {
+    var histogram = Thresh.help.createHistogram(canvas);
     var start = 0;
     var end = histogram.g.length - 1;
     var leftWeight, rightWeight,
@@ -146,11 +76,11 @@
     var max = -Infinity, threshold;
 
     histogram.g.forEach(function(el, i) {
-      leftWeight = calcWeight(histogram.g, start, i);
-      rightWeight = calcWeight(histogram.g, i, end + 1);
-      leftMean = calcMean(histogram.g, start, i);
-      rightMean = calcMean(histogram.g, i, end + 1);
-      betweenClassVariances[i] = calcBetweenClassVariance(leftWeight, leftMean, rightWeight, rightMean);
+      leftWeight = Thresh.help.calcWeight(histogram.g, start, i);
+      rightWeight = Thresh.help.calcWeight(histogram.g, i, end + 1);
+      leftMean = Thresh.help.calcMean(histogram.g, start, i);
+      rightMean = Thresh.help.calcMean(histogram.g, i, end + 1);
+      betweenClassVariances[i] = Thresh.help.calcBetweenClassVariance(leftWeight, leftMean, rightWeight, rightMean);
       if (betweenClassVariances[i] > max) {
         max = betweenClassVariances[i];
         threshold = i;
@@ -159,13 +89,6 @@
 
     return {max: max, threshold: threshold};
   };
-
-  var testImgData2 = [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 2, 2, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5];
-  var histogram2 = createHistogram(testImgData2);
-
-  console.log(otsu(testImgData2));
-  console.log(fastOtsu(testImgData2));
-
 
   /*
    * Iterative Selection Thresholding Method
@@ -182,22 +105,13 @@
         or the difference is small enough (compare to predefined var)
    *
    */
-  var calcAverage = function(arr) {
-    var cSum = sum = 0;
-    arr.forEach(function(el, i) {
-      cSum += (el * i);
-      sum += el;
-    });
-    return cSum/sum;
-  };
-
-  var ist = function(imgData) {
-    var histogram = createHistogram(imgData);
+  var ist = function(canvas) {
+    var histogram = Thresh.help.createHistogram(canvas);
     var start = 0;
     var end = histogram.g.length - 1;
-    var mean = Math.round(calcMean(histogram.g, start, end + 1));
-    var meanBelow = Math.round(calcMean(histogram.g, start, mean));
-    var meanAbove = Math.round(calcMean(histogram.g, mean + 1, end + 1));
+    var mean = Math.round(Thresh.help.calcMean(histogram.g, start, end + 1));
+    var meanBelow = Math.round(Thresh.help.calcMean(histogram.g, start, mean));
+    var meanAbove = Math.round(Thresh.help.calcMean(histogram.g, mean + 1, end + 1));
     var nMean = Math.round((meanBelow + meanAbove)/2);
     var thresholds = [mean, nMean];
     var i = 1;
@@ -205,8 +119,8 @@
     while ((thresholds[i] - thresholds[i - 1]) > 0) {
       mean = thresholds[i];
 
-      meanBelow = Math.round(calcMean(histogram.g, start, mean));
-      meanAbove = Math.round(calcMean(histogram.g, mean + 1, end + 1));
+      meanBelow = Math.round(Thresh.help.calcMean(histogram.g, start, mean));
+      meanAbove = Math.round(Thresh.help.calcMean(histogram.g, mean + 1, end + 1));
       nMean = Math.round((meanBelow + meanAbove)/2);
       thresholds.push(nMean);
       i++;
@@ -214,5 +128,8 @@
     return thresholds[thresholds.length - 1];
   };
 
-  console.log(ist(testImgData2));
+  exports.Thresh.bht = bht;
+  exports.Thresh.otsu = otsu;
+  exports.Thresh.fastOtsu = fastOtsu;
+  exports.Thresh.ist = ist;
 }(this));

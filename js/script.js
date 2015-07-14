@@ -1,12 +1,20 @@
 ;(function(exports) {
-  var histogramBtn  = document.getElementById('histogram-btn'),
-      clusterBtn    = document.getElementById('cluster-btn'),
-      entropyBtn    = document.getElementById('entropy-btn'),
-      objectBtn     = document.getElementById('object-btn'),
-      spatialBtn    = document.getElementById('spatial-btn'),
-      localBtn      = document.getElementById('local-btn'),
-      invertBtn = document.getElementById('invert'),
-      resetBtn = document.getElementById('reset');
+  var canvas = new Canvas('canvas'),
+      filters = new Filters(canvas);
+
+  var bhtBtn      = document.getElementById('bht'),
+      otsuBtn     = document.getElementById('otsu'),
+      fastOtsuBtn = document.getElementById('fastotsu'),
+      istBtn      = document.getElementById('ist'),
+      clusterBtn   = document.getElementById('cluster-btn'),
+      entropyBtn   = document.getElementById('entropy-btn'),
+      objectBtn   = document.getElementById('object-btn'),
+      spatialBtn  = document.getElementById('spatial-btn'),
+      localBtn    = document.getElementById('local-btn');
+
+  var grayBtn     = document.getElementById('gray'),
+      invertBtn   = document.getElementById('invert'),
+      resetBtn    = document.getElementById('reset');
 
   function checkForImg() {
     var params = window.location.search;
@@ -17,7 +25,20 @@
     }
   }
 
-  histogramBtn.onclick = function() {
+  bhtBtn.onclick = function() {
+    console.log(Thresh.bht(canvas));
+  };
+
+  otsuBtn.onclick = function() {
+    console.log(Thresh.otsu(canvas));
+  };
+
+  fastOtsuBtn.onclick = function() {
+    console.log(Thresh.fastOtsu(canvas));
+  };
+
+  istBtn.onclick = function() {
+    console.log(Thresh.ist(canvas));
   };
 
   clusterBtn.onclick = function() {
@@ -35,12 +56,17 @@
   localBtn.onclick = function() {
   };
 
+  grayBtn.onclick = function() {
+    canvas.setImgData(filters.grayscale());
+  };
+
   invertBtn.onclick = function() {
     canvas.setImgData(filters.invertColors());
   };
 
   resetBtn.onclick = function() {
-    canvas.setImgData(canvas.origImg.imgData);//put back the original image to the canvas
+    //put back the original image to the canvas
+    canvas.setImgData(canvas.origImg.imgData);
   };
 
   checkForImg();
